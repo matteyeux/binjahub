@@ -7,7 +7,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+uvicorn = "^0.21.1"
+fastapi = "^0.95.0"
 
+[tool.poetry.scripts]
+oracle = "binjahub.main:main"
 
 [build-system]
 requires = ["poetry-core"]
