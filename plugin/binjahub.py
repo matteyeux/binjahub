@@ -17,7 +17,7 @@ class BinjahubViewerDialog(QDialog):
         # UI
         self.context = context
 
-        self.binjahub = Binjahub("localhost", 5555)
+        self.binjahub = Binjahub("10.66.66.5", 5555)
         bndbs = self.binjahub.list_bndbs()
         self.comments_model = BinjahubViewModel(bndbs)
 
@@ -192,7 +192,7 @@ def push_to_binjahub(bv):
     bndb = f"{absolut_file}.bndb"
     bv.save(bndb)
 
-    binjahub = Binjahub("localhost", 5555)
+    binjahub = Binjahub("10.66.66.5", 5555)
     binjahub.upload_bndb(filename, bndb)
 
 
