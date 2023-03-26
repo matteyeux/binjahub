@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter
 from fastapi import HTTPException
 from fastapi import UploadFile, File, Response
-
+from fastapi.responses import FileResponse
 
 router = APIRouter()
 
@@ -24,20 +24,7 @@ def upload_bndb(file: UploadFile = File(...)):
 
     return {"filename": file.filename}
 
-
-# @router.get("/bndb/{filename}", tags=["bndb"])
-# def download_bndb(filename: str):
-#    with open(f"BNDB/{filename}", "rb") as buffer:
-#        contents = buffer.read()
-#    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
-#    response.headers["Content-Type"] = "application/octet-stream"
-#    return contents
-
-
 @router.get("/bndb/{filename}", tags=["bndb"])
-def download_file(filename: str, response: Response):
-    with open(f"BNDB/{filename}", "rb") as buffer:
-        contents = buffer.read()
-    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
-    response.headers["Content-Type"] = "application/octet-stream"
-    return contents
+def download_bndb(filename: str):
+    # TODO check if file exits
+    return FileResponse(f"BNDB/{filename}")
