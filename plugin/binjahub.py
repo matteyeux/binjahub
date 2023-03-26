@@ -12,9 +12,13 @@ from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTreeView
 
 
 class CommentsViewerDialog(QDialog):
-    def __init__(self, bndbs):
+    def __init__(self, context):
         super(CommentsViewerDialog, self).__init__()
         # UI
+        self.context = context
+
+        self.binjahub = Binjahub("localhost", 5555)
+        bndbs = self.binjahub.list_bndbs()
         self.comments_model = CommentsModel(bndbs)
 
         self.match_view = QTreeView()
@@ -50,9 +54,8 @@ class CommentsViewerDialog(QDialog):
             assert False
             return
         entry = self.comments_model.entries[index.row()]
-        address = entry["address"]
-        #self.bv.navigate(self.bv.file.view, address)
-        print("WOOOOO")
+        filename = self.binjahub.get_bndb(entry['bndb'])
+        self.context.openFilename(filename)
 
 
 class CommentsModel(QAbstractItemModel):
@@ -66,7 +69,6 @@ class CommentsModel(QAbstractItemModel):
                 if result is None:
                     return default
                 return result
-
             return f
 
         def col_field_fmt(key, fmt):
@@ -77,33 +79,18 @@ class CommentsModel(QAbstractItemModel):
 
         # Column name, sort key, display function
         self.comments_info = [
-            ("Address", "address", col_addr_field("address")),
-            ("Function", "function", col_field("function")),
-            ("Comment", "comment", col_field("comment")),
+            ("BNDB", "bndb", col_field("bndb")),
+            ("Size", "size", col_field("size")),
         ]
 
         self.entries = []
         entry = {}
-        #entry["address"] = 123
-        #entry["function"] = "function.name"
-        #entry["comment"] = "function.comments[addr]"
-        #self.entries.append(entry)
 
-        for i in range(50):
-            for bndb in bndbs['files']:
-                entry = {}
-                entry["address"] = 123
-                entry["function"] = bndb
-                entry["comment"] = " "
-                self.entries.append(entry)
-            
-        #for function in bv.functions:
-        #    for addr in function.comments.keys():
-        #        entry = {}
-        #        entry["address"] = addr
-        #        entry["function"] = function.name
-        #        entry["comment"] = function.comments[addr]
-        #        self.entries.append(entry)
+        for bndb in bndbs:
+            entry = {}
+            entry["bndb"] = bndb
+            entry["size"] = bndbs[bndb]
+            self.entries.append(entry)
 
     def index(self, row, col, parent):
         if parent.isValid():
@@ -157,20 +144,6 @@ class CommentsModel(QAbstractItemModel):
         self.endResetModel()
 
 
-#def view_comments(bv):
-#    # Qt
-#    assert QApplication.instance() is not None
-#
-#    global dialog
-#    dialog = CommentsViewerDialog(bv)
-#    dialog.show()
-#    dialog.raise_()
-#    dialog.activateWindow()
-
-
-
-
-
 class Binjahub:
     def __init__(self, host: str , port: int):
         self.host = host
@@ -198,30 +171,14 @@ def open_for_binjahub(ctx: UIActionContext):
     if context is None:
         return
 
-    #link_field =  interaction.TextLineField("URL", "lol")
-    #token_field = interaction.TextLineField("token", "lol2")
-
-    #if not interaction.get_form_input(["Open...", None, link_field, token_field], "open from blabla"):
-    #    return
-
-    link = link_field.result
-    token = token_field.result
-
-    binjahub = Binjahub("localhost", 5555)
-    bnbd_list = binjahub.list_bndbs()
-
-    # Qt
     assert QApplication.instance() is not None
 
     global dialog
-    dialog = CommentsViewerDialog(bnbd_list)
+    dialog = CommentsViewerDialog(context)
     dialog.show()
     dialog.raise_()
     dialog.activateWindow()
 
-    #filename = binjahub.get_bndb("xorddos.bndb")
-    #print(filename)
-    #context.openFilename(filename)
 
 UIAction.registerAction("Open from binjahub")
 UIActionHandler.globalActions().bindAction("Open from binjahub", UIAction(open_for_binjahub))
