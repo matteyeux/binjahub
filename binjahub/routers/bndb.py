@@ -2,8 +2,7 @@ import glob
 import os
 from pathlib import Path
 from fastapi import APIRouter
-from fastapi import HTTPException
-from fastapi import UploadFile, File, Response
+from fastapi import UploadFile, File
 from fastapi.responses import FileResponse
 
 router = APIRouter()
@@ -15,17 +14,17 @@ def list_bndbs():
     files = {}
     for file in glob.glob('BNDB/*'):
         f = Path(file)
-        filesize = (f.stat().st_size) / (1024*1024)
+        filesize = (f.stat().st_size) / (1024 * 1024)
         files[os.path.basename(file)] = f"{filesize:.2f} MB"
     return files
 
 
 @router.post("/bndb", tags=["bndb"])
-def upload_bndb(file: UploadFile = File(...)):
-    with open(file.filename, "wb") as buffer:
-        buffer.write(file.read())
-
+async def upload_bndb(file: UploadFile = File(...)):
+    with open(f"BNDB/{file.filename}", "wb") as buffer:
+        buffer.write(await file.read())
     return {"filename": file.filename}
+
 
 @router.get("/bndb/{filename}", tags=["bndb"])
 def download_bndb(filename: str):
