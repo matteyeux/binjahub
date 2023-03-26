@@ -54,6 +54,7 @@ class CommentsViewerDialog(QDialog):
         #self.bv.navigate(self.bv.file.view, address)
         print("WOOOOO")
 
+
 class CommentsModel(QAbstractItemModel):
     def __init__(self, bndbs):
         super(CommentsModel, self).__init__()
@@ -197,34 +198,27 @@ def open_for_binjahub(ctx: UIActionContext):
     if context is None:
         return
 
-    link_field =  interaction.TextLineField("URL", "lol")
-    token_field = interaction.TextLineField("token", "lol2")
+    #link_field =  interaction.TextLineField("URL", "lol")
+    #token_field = interaction.TextLineField("token", "lol2")
 
-    if not interaction.get_form_input(["Open...", None, link_field, token_field], "open from blabla"):
-        return
-
+    #if not interaction.get_form_input(["Open...", None, link_field, token_field], "open from blabla"):
+    #    return
 
     link = link_field.result
     token = token_field.result
 
-    #name = Settings().get_string("network.downloadProviderName")
-    #dl = DownloadProvider[name].create_instance()
-    #result = dl.get("http://195.154.105.118:8000/true.bndb")
-
-    #result_file = Path(binaryninja.user_directory()) / 'binjahub' / 'true.bndb'
-    #result_file.parent.mkdir(parents=True, exist_ok=True)
-    #with open(result_file, 'wb') as f:
-    #    f.write(result.content)
     binjahub = Binjahub("localhost", 5555)
-    binjahub.list_bndbs()
+    bnbd_list = binjahub.list_bndbs()
+
     # Qt
     assert QApplication.instance() is not None
 
     global dialog
-    dialog = CommentsViewerDialog(binjahub.list_bndbs())
+    dialog = CommentsViewerDialog(bnbd_list)
     dialog.show()
     dialog.raise_()
     dialog.activateWindow()
+
     #filename = binjahub.get_bndb("xorddos.bndb")
     #print(filename)
     #context.openFilename(filename)
@@ -232,4 +226,4 @@ def open_for_binjahub(ctx: UIActionContext):
 UIAction.registerAction("Open from binjahub")
 UIActionHandler.globalActions().bindAction("Open from binjahub", UIAction(open_for_binjahub))
 Menu.mainMenu("File").addAction("Open from binjahub", "Open")
-UIContext.registerFileOpenMode("binjahub...", "lol", "Open from binjahub")
+UIContext.registerFileOpenMode("Binjahub", "Open from Binjahub", "Open from binjahub")
