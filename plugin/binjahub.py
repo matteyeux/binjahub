@@ -1,14 +1,26 @@
-import binaryninja
-import requests
-from binaryninja import PluginCommand
 from pathlib import Path
-from binaryninjaui import UIAction, UIContext, UIActionContext, UIActionHandler, Menu
 from typing import Optional
 
+import binaryninja
 import binaryninjaui
-
-from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
-from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTreeView
+import requests
+from binaryninja import interaction
+from binaryninja import PluginCommand
+from binaryninja.enums import MessageBoxButtonResult
+from binaryninja.enums import MessageBoxButtonSet
+from binaryninja.enums import MessageBoxIcon
+from binaryninjaui import Menu
+from binaryninjaui import UIAction
+from binaryninjaui import UIActionContext
+from binaryninjaui import UIActionHandler
+from binaryninjaui import UIContext
+from PySide6.QtCore import QAbstractItemModel
+from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QTreeView
+from PySide6.QtWidgets import QVBoxLayout
 
 
 class BinjahubViewerDialog(QDialog):
@@ -17,7 +29,7 @@ class BinjahubViewerDialog(QDialog):
         # UI
         self.context = context
 
-        self.binjahub = Binjahub("localhost", 5555)
+        self.binjahub = Binjahub("10.66.66.5", 5555)
         bndbs = self.binjahub.list_bndbs()
         self.comments_model = BinjahubViewModel(bndbs)
 
@@ -165,7 +177,7 @@ class Binjahub:
         open(file, 'wb').write(r.content)
         return str(file)
 
-    def upload_bndb(self, filename, bndb):
+    def upload_bndb(self, bndb):
         file = {'file': open(bndb, 'rb')}
         response = requests.post(f"http://{self.host}:{self.port}/bndb", files=file)
         print(response.json())
@@ -173,7 +185,6 @@ class Binjahub:
 
 def open_for_binjahub(ctx: UIActionContext):
     context: UIContext = ctx.context
-
     if context is None:
         return
 
@@ -187,13 +198,18 @@ def open_for_binjahub(ctx: UIActionContext):
 
 
 def push_to_binjahub(bv):
-    filename = bv.file.filename.split('/')[-1]
-    absolut_file = f"{binaryninja.user_directory()}/binjahub/{filename}"
-    bndb = f"{absolut_file}.bndb"
-    bv.save(bndb)
+    if bv.file.database is None:
+        interaction.show_message_box(
+            "Binjahub",
+            "Please save the database first",
+            MessageBoxButtonSet.OKButtonSet,
+            MessageBoxIcon.ErrorIcon,
+        )
+        return
 
-    binjahub = Binjahub("localhost", 5555)
-    binjahub.upload_bndb(filename, bndb)
+    bndb = bv.file.database.file.filename
+    binjahub = Binjahub("10.66.66.5", 5555)
+    binjahub.upload_bndb(bndb)
 
 
 UIAction.registerAction("Open from binjahub")
