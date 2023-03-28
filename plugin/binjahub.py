@@ -5,6 +5,7 @@ import binaryninja
 import binaryninjaui
 import requests
 from binaryninja import interaction
+from binaryninja import log
 from binaryninja import PluginCommand
 from binaryninja.enums import MessageBoxButtonResult
 from binaryninja.enums import MessageBoxButtonSet
@@ -165,7 +166,6 @@ class Binjahub:
     def list_bndbs(self) -> dict:
         r = requests.get(f"http://{self.host}:{self.port}/bndb")
         data = r.json()
-        print(data)
         return data
 
     def get_bndb(self, bndb) -> Optional[str]:
@@ -180,7 +180,7 @@ class Binjahub:
     def upload_bndb(self, bndb):
         file = {'file': open(bndb, 'rb')}
         response = requests.post(f"http://{self.host}:{self.port}/bndb", files=file)
-        print(response.json())
+        log.log_info(f"Saved database to {self.host}")
 
 
 def open_for_binjahub(ctx: UIActionContext):
