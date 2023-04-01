@@ -4,6 +4,7 @@ from typing import Optional
 import binaryninja
 import binaryninjaui
 import requests
+from binaryninja import BackgroundTaskThread
 from binaryninja import interaction
 from binaryninja import log
 from binaryninja import PluginCommand
@@ -178,9 +179,20 @@ class Binjahub:
         return str(file)
 
     def upload_bndb(self, bndb):
+        log.log_info(f"Uploading {bndb}")
         file = {'file': open(bndb, 'rb')}
         response = requests.post(f"http://{self.host}:{self.port}/bndb", files=file)
         log.log_info(f"Saved database to {self.host}")
+
+
+class BackgroundTask(BackgroundTaskThread):
+    def __init__(self, message, func, *args):
+        BackgroundTaskThread.__init__(self, message)
+        self.func = func
+        self.args = args
+
+    def run(self):
+        self.func(self.args[0])
 
 
 def open_for_binjahub(ctx: UIActionContext):
@@ -209,7 +221,8 @@ def push_to_binjahub(bv):
 
     bndb = bv.file.database.file.filename
     binjahub = Binjahub("10.66.66.5", 5555)
-    binjahub.upload_bndb(bndb)
+    background_task = BackgroundTask("Binjahub upload...", binjahub.upload_bndb, bndb)
+    background_task.start()
 
 
 UIAction.registerAction("Open from binjahub")
