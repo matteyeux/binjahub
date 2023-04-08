@@ -8,6 +8,7 @@ from binaryninja import BackgroundTaskThread
 from binaryninja import interaction
 from binaryninja import log
 from binaryninja import PluginCommand
+from binaryninja import Settings
 from binaryninja.enums import MessageBoxButtonResult
 from binaryninja.enums import MessageBoxButtonSet
 from binaryninja.enums import MessageBoxIcon
@@ -25,13 +26,43 @@ from PySide6.QtWidgets import QTreeView
 from PySide6.QtWidgets import QVBoxLayout
 
 
+Settings().register_group("binjahub", "Binjahub")
+Settings().register_setting(
+    "binjahub.host",
+    """
+    {
+        "title" : "Host",
+        "type" : "string",
+        "default" : "127.0.0.1",
+        "description" : "IP address or hostname of Binjahub server",
+        "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+    }
+    """,
+)
+Settings().register_setting(
+    "binjahub.port",
+    """
+    {
+        "title" : "Port",
+        "type" : "string",
+        "default" : "5555",
+        "description" : "Port of Binjahub server",
+        "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+    }
+    """,
+)
+
+
 class BinjahubViewerDialog(QDialog):
     def __init__(self, context):
         super(BinjahubViewerDialog, self).__init__()
         # UI
         self.context = context
 
-        self.binjahub = Binjahub("10.66.66.5", 5555)
+        # Host is set in the binja settings
+        host = Settings().get_string("binjahub.host")
+        port = int(Settings().get_string("binjahub.port"))
+        self.binjahub = Binjahub(host, port)
         bndbs = self.binjahub.list_bndbs()
         self.comments_model = BinjahubViewModel(bndbs)
 
@@ -220,7 +251,9 @@ def push_to_binjahub(bv):
         return
 
     bndb = bv.file.database.file.filename
-    binjahub = Binjahub("10.66.66.5", 5555)
+    host = Settings().get_string("binjahub.host")
+    port = int(Settings().get_string("binjahub.port"))
+    self.binjahub = Binjahub(host, port)
     background_task = BackgroundTask("Binjahub upload...", binjahub.upload_bndb, bndb)
     background_task.start()
 
@@ -233,3 +266,4 @@ Menu.mainMenu("File").addAction("Open from binjahub", "Open")
 UIContext.registerFileOpenMode("Binjahub", "Open from Binjahub", "Open from binjahub")
 
 PluginCommand.register("Push to Binjahub", "Push to Binjahub", push_to_binjahub)
+
