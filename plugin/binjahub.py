@@ -253,7 +253,7 @@ def push_to_binjahub(bv):
     bndb = bv.file.database.file.filename
     host = Settings().get_string("binjahub.host")
     port = int(Settings().get_string("binjahub.port"))
-    self.binjahub = Binjahub(host, port)
+    binjahub = Binjahub(host, port)
     background_task = BackgroundTask("Binjahub upload...", binjahub.upload_bndb, bndb)
     background_task.start()
 
