@@ -26,13 +26,14 @@ INFO:     Uvicorn running on http://127.0.0.1:5555 (Press CTRL+C to quit)
 Copy the plugin to `~/.binaryninja/plugins` (support for Windows : ETA SON).
 
 Configure the settings for the plugin :
-![image](https://github.com/matteyeux/binjahub/assets/8758978/6fbce05d-a917-41d4-b6b6-a9578019dc6f)
+
+![sc1](https://github.com/matteyeux/binjahub/assets/8758978/ad8391a4-dbf5-4aac-9f6b-cefa91a158bf)
 
 You can now open a new binary, then from the command palette you can "Push to Binjahub".
 
 In a new Binary Ninja window, you should have a new button "Open from Binjahub":
 
-![image](https://github.com/matteyeux/binjahub/assets/8758978/c7fde0ff-d323-4346-97d5-10ff0e583412)
+![sc2](https://github.com/matteyeux/binjahub/assets/8758978/c2d7edc5-dab0-4396-86e4-612fb8028639)
 
 Double-click on the target BNDB and it will be opened in a new BinaryView.
 
