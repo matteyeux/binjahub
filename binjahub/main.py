@@ -67,7 +67,7 @@ def main() -> int:
         url=parser.server,
         base=parser.base_dn,
         user=parser.bind_user,
-        password=parser.bind_password,
+        password=password,
     )
 
     uvicorn.run(
