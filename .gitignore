@@ -3,3 +3,4 @@ binjahub/routers/__pycache__/
 BNDB
 dist
 *.bndb
+.env
