@@ -51,6 +51,20 @@ Settings().register_setting(
     }
     """,
 )
+Settings().register_setting(
+    "binjahub.secure",
+    """
+    {
+        "title" : "Use TLS",
+        "type" : "boolean",
+        "default" : false,
+        "description" : "Use HTTPS to communicate with Binjahub server",
+        "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+    }
+    """,
+)
+
+CREDS = {}
 
 
 class BinjahubViewerDialog(QDialog):
@@ -62,7 +76,8 @@ class BinjahubViewerDialog(QDialog):
         # Host is set in the binja settings
         host = Settings().get_string("binjahub.host")
         port = int(Settings().get_string("binjahub.port"))
-        self.binjahub = Binjahub(host, port)
+        secure = Settings().get_bool("binjahub.secure")
+        self.binjahub = Binjahub(host, port, secure=secure)
         bndbs = self.binjahub.list_bndbs()
         self.comments_model = BinjahubViewModel(bndbs)
 
@@ -99,7 +114,10 @@ class BinjahubViewerDialog(QDialog):
             assert False
             return
         entry = self.comments_model.entries[index.row()]
-        filename = self.binjahub.get_bndb(entry['bndb'])
+        filename = self.binjahub.get_bndb(entry["bndb"])
+        if not filename:
+            log.log_alert(f"{entry['bndb']} does not exist!")
+            return
         self.context.openFilename(filename)
 
 
@@ -191,29 +209,97 @@ class BinjahubViewModel(QAbstractItemModel):
 
 
 class Binjahub:
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, secure=False):
         self.host = host
         self.port = port
+        self.token = None
+        self.base_url = f"http{'s' if secure else ''}://{self.host}:{self.port}"
+        if self.needs_auth():
+            self.prompt_creds()
+
+    def prompt_creds(self):
+        global CREDS
+        while True:
+            if not CREDS:
+                user = interaction.get_text_line_input("Username", "LDAP Credentials")
+                password = interaction.get_text_line_input(
+                    "Password", "LDAP Credentials"
+                )
+            else:
+                user, password = CREDS["username"], CREDS["password"]
+            if user and password:
+                if self.auth(user, password):
+                    CREDS = {"username": user, "password": password}
+                    break
+                CREDS = {}
+            else:
+                break
+            log.log_alert("Incorrect credentials!")
+
+    def auth(self, username, password):
+        r = self.post("login", data={"username": username, "password": password})
+        if not r:
+            return False
+        if "access_token" not in r:
+            return False
+        self.token = r["access_token"]
+        return True
+
+    def needs_auth(self):
+        r = self.get("auth-required")
+        if r and r["auth_required"]:
+            return True
+        return False
+
+    def get(self, url=""):
+        if self.token:
+            headers = {"Authorization": f"Bearer {self.token}"}
+        else:
+            headers = None
+        url = f"{self.base_url}/{url}" if url else self.base_url
+        r = requests.get(url, headers=headers)
+        return self.__resolve_req(r)
+
+    def post(self, url="", **kwargs):
+        if self.token:
+            headers = {"Authorization": f"Bearer {self.token}"}
+        else:
+            headers = None
+        url = f"{self.base_url}/{url}" if url else self.base_url
+        r = requests.post(url, headers=headers, **kwargs)
+        return self.__resolve_req(r)
 
     def list_bndbs(self) -> dict:
-        r = requests.get(f"http://{self.host}:{self.port}/bndb")
-        data = r.json()
-        return data
+        if dbs := self.get("bndb"):
+            return dbs
+        return []
 
     def get_bndb(self, bndb) -> Optional[str]:
-        r = requests.get(f"http://{self.host}:{self.port}/bndb/{bndb}")
-        if r.status_code != 200:
+        data = self.get(f"bndb/{bndb}")
+        if not data:
             return None
-        file = Path(binaryninja.user_directory()) / 'binjahub' / bndb
+        file = Path(binaryninja.user_directory()) / "binjahub" / bndb
         file.parent.mkdir(parents=True, exist_ok=True)
-        open(file, 'wb').write(r.content)
+        open(file, "wb").write(data)
         return str(file)
 
     def upload_bndb(self, bndb):
         log.log_info(f"Uploading {bndb}")
-        file = {'file': open(bndb, 'rb')}
-        response = requests.post(f"http://{self.host}:{self.port}/bndb", files=file)
+        file = {"file": open(bndb, "rb")}
+        response = self.post("bndb", files=file)
+        if not response:
+            log.log_alert(f"Unable to save database!")
+            return
         log.log_info(f"Saved database to {self.host}")
+
+    def __resolve_req(self, r: requests.Response):
+        if r.status_code != 200:
+            return None
+        try:
+            data = r.json()
+        except requests.JSONDecodeError:
+            data = r.content
+        return data
 
 
 class BackgroundTask(BackgroundTaskThread):
@@ -253,7 +339,8 @@ def push_to_binjahub(bv):
     bndb = bv.file.database.file.filename
     host = Settings().get_string("binjahub.host")
     port = int(Settings().get_string("binjahub.port"))
-    binjahub = Binjahub(host, port)
+    secure = Settings().get_bool("binjahub.secure")
+    binjahub = Binjahub(host, port, secure=secure)
     background_task = BackgroundTask("Binjahub upload...", binjahub.upload_bndb, bndb)
     background_task.start()
 
@@ -266,4 +353,3 @@ Menu.mainMenu("File").addAction("Open from binjahub", "Open")
 UIContext.registerFileOpenMode("Binjahub", "Open from Binjahub", "Open from binjahub")
 
 PluginCommand.register("Push to Binjahub", "Push to Binjahub", push_to_binjahub)
-

@@ -10,6 +10,9 @@ python = "^3.10"
 uvicorn = "^0.21.1"
 fastapi = "^0.95.0"
 python-multipart = "^0.0.6"
+ldap3 = "^2.9.1"
+pyjwt = {extras = ["crypto"], version = "^2.8.0"}
+python-dotenv = "^1.0.0"
 
 [tool.poetry.scripts]
 oracle = "binjahub.main:main"
