@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from binjahub.auth import ldap_connect, uses_auth
-from binjahub.routers import auth, bndb
+from binjahub.routers import auth, bndb, warp
 
 
 @asynccontextmanager
@@ -23,6 +23,8 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(bndb.router)
 app.include_router(auth.router)
+app.include_router(warp.router)
+
 
 
 @app.get("/")
