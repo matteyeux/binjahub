@@ -1,10 +1,10 @@
 import os
 import secrets
+from typing import List
+
 from ldap3 import SUBTREE, Connection, Server
 from ldap3.core.exceptions import LDAPBindError, LDAPPasswordIsMandatoryError
 from ldap3.utils.conv import escape_filter_chars
-
-from typing import List
 
 internal_ldap_args = {}
 internal_jwt_secret = ""

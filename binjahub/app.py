@@ -1,10 +1,11 @@
 """Main app module to initialize the FastAPI framework."""
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+
 from binjahub.auth import ldap_connect, uses_auth
-from binjahub.routers import bndb
-from binjahub.routers import auth
+from binjahub.routers import auth, bndb
 
 
 @asynccontextmanager

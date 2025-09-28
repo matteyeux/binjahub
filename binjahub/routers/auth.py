@@ -1,9 +1,10 @@
-import jwt
 import time
-from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
+
+import jwt
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from fastapi import HTTPException, Depends, APIRouter
 
 from binjahub.auth import jwt_secret, ldap_connect, uses_auth
 
