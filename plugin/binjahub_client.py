@@ -4,26 +4,13 @@ from typing import Optional
 import binaryninja
 import binaryninjaui
 import requests
-from binaryninja import BackgroundTaskThread
-from binaryninja import interaction
-from binaryninja import log
-from binaryninja import PluginCommand
-from binaryninja import Settings
-from binaryninja.enums import MessageBoxButtonSet
-from binaryninja.enums import MessageBoxIcon
-from binaryninjaui import Menu
-from binaryninjaui import UIAction
-from binaryninjaui import UIActionContext
-from binaryninjaui import UIActionHandler
-from binaryninjaui import UIContext
-from PySide6.QtCore import QAbstractItemModel
-from PySide6.QtCore import QModelIndex
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
-from PySide6.QtWidgets import QDialog
-from PySide6.QtWidgets import QTreeView
-from PySide6.QtWidgets import QVBoxLayout
-
+from binaryninja import (BackgroundTaskThread, PluginCommand, Settings,
+                         interaction, log)
+from binaryninja.enums import MessageBoxButtonSet, MessageBoxIcon
+from binaryninjaui import (Menu, UIAction, UIActionContext, UIActionHandler,
+                           UIContext)
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PySide6.QtWidgets import QApplication, QDialog, QTreeView, QVBoxLayout
 
 Settings().register_group("binjahub", "Binjahub")
 Settings().register_setting(

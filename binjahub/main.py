@@ -2,10 +2,11 @@
 """Main code for the oracle API."""
 import argparse
 from getpass import getpass
+
 import uvicorn
+from dotenv import load_dotenv
 
 from binjahub.auth import setup_ldap_auth
-from dotenv import load_dotenv
 
 
 def parse_arguments() -> argparse.Namespace:

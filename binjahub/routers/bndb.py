@@ -1,13 +1,12 @@
 import glob
 import os
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi import UploadFile, File
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from binjahub.common import authenticated
-
-from typing import Annotated
 
 router = APIRouter()
 
