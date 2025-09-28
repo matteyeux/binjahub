@@ -9,7 +9,6 @@ from binaryninja import interaction
 from binaryninja import log
 from binaryninja import PluginCommand
 from binaryninja import Settings
-from binaryninja.enums import MessageBoxButtonResult
 from binaryninja.enums import MessageBoxButtonSet
 from binaryninja.enums import MessageBoxIcon
 from binaryninjaui import Menu
@@ -288,7 +287,7 @@ class Binjahub:
         file = {"file": open(bndb, "rb")}
         response = self.post("bndb", files=file)
         if not response:
-            log.log_alert(f"Unable to save database!")
+            log.log_alert("Unable to save database!")
             return
         log.log_info(f"Saved database to {self.host}")
 
