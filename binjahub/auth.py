@@ -4,6 +4,7 @@ from ldap3 import SUBTREE, Connection, Server
 from ldap3.core.exceptions import LDAPBindError, LDAPPasswordIsMandatoryError
 from ldap3.utils.conv import escape_filter_chars
 
+from typing import List
 
 internal_ldap_args = {}
 internal_jwt_secret = ""
@@ -16,25 +17,25 @@ def setup_ldap_auth(**kwargs):
     internal_jwt_secret = os.getenv("JWT_SECRET", secrets.token_urlsafe(64))
 
 
-def jwt_secret():
+def jwt_secret() -> str:
     return internal_jwt_secret
 
 
-def uses_auth():
+def uses_auth() -> bool:
     if internal_ldap_args["url"]:
         return True
     return False
 
 
-def convert_user_to_dn(user: str):
+def convert_user_to_dn(user: str) -> str:
     if "@" not in user:
         return user
     user, domain = user.split("@", 1)
-    domain = domain.split(".")
-    return f"cn={user},dc={',dc='.join(domain)}"
+    parts: List[str] = domain.split(".")
+    return f"cn={user},dc={',dc='.join(parts)}"
 
 
-def ldap_connect(user="", password=""):
+def ldap_connect(user="", password="") -> bool:
     try:
         s = Server(internal_ldap_args["url"], get_info="ALL")
         conn = Connection(

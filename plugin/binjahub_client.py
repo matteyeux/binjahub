@@ -63,7 +63,7 @@ Settings().register_setting(
     """,
 )
 
-CREDS = {}
+CREDS: dict = {}
 
 
 class BinjahubViewerDialog(QDialog):
@@ -271,7 +271,7 @@ class Binjahub:
     def list_bndbs(self) -> dict:
         if dbs := self.get("bndb"):
             return dbs
-        return []
+        return {}
 
     def get_bndb(self, bndb) -> Optional[str]:
         data = self.get(f"bndb/{bndb}")
@@ -318,11 +318,11 @@ def open_for_binjahub(ctx: UIActionContext):
 
     assert QApplication.instance() is not None
 
-    global dialog
-    dialog = BinjahubViewerDialog(context)
-    dialog.show()
-    dialog.raise_()
-    dialog.activateWindow()
+    global dialog  # type: ignore
+    dialog = BinjahubViewerDialog(context)  # type: ignore
+    dialog.show()  # type: ignore
+    dialog.raise_()  # type: ignore
+    dialog.activateWindow()  # type: ignore
 
 
 def push_to_binjahub(bv):
