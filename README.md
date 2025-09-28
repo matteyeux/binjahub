@@ -9,13 +9,13 @@ This repository is split in two parts:
 
 ### Server
 
-Start the binjahub server with poetry : `cd binjahub && poetry install`
+Start the binjahub server with `uv` : `uv run`
 
 Then start the server:
 
 ```
- » poetry run binjahub/main.py
-INFO:     Started server process [5939]
+ » uv run binjahub/main.py
+INFO:     Started server process [48890]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:5555 (Press CTRL+C to quit)
@@ -26,7 +26,7 @@ INFO:     Uvicorn running on http://127.0.0.1:5555 (Press CTRL+C to quit)
 To use LDAP authentication, create a bind user that can see the target base DN of your users. Then, connect using the following syntax, replacing the bind user credentals and base DN with your own:
 
 ```bash
- » poetry run binjahub/main.py -s 'ldap://my-ldap-server:389' -b 'ou=users,dc=my-domain,dc=com' -u 'binjahub_user@my-domain.com' -P 'binjahub-passw0rd'
+ » uv run binjahub/main.py -s 'ldap://my-ldap-server:389' -b 'ou=users,dc=my-domain,dc=com' -u 'binjahub_user@my-domain.com' -P 'binjahub-passw0rd'
 INFO:     Started server process [5939]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
