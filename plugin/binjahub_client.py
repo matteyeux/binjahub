@@ -1,12 +1,15 @@
+import os
 from pathlib import Path
 from typing import Optional
 
 import binaryninja
 import binaryninjaui
 import requests
-from binaryninja import (BackgroundTaskThread, PluginCommand, Settings,
-                         interaction, log)
+from binaryninja import (BackgroundTaskThread, BinaryView, PluginCommand,
+                         Settings, interaction, log)
 from binaryninja.enums import MessageBoxButtonSet, MessageBoxIcon
+from binaryninja.warp import (WarpContainer, WarpFunction, WarpTarget,
+                              run_matcher)
 from binaryninjaui import (Menu, UIAction, UIActionContext, UIActionHandler,
                            UIContext)
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt
@@ -54,7 +57,7 @@ CREDS: dict = {}
 
 
 class BinjahubViewerDialog(QDialog):
-    def __init__(self, context):
+    def __init__(self, context: UIContext = None, bv: BinaryView = None):
         super(BinjahubViewerDialog, self).__init__()
         # UI
         self.context = context
@@ -64,47 +67,66 @@ class BinjahubViewerDialog(QDialog):
         port = int(Settings().get_string("binjahub.port"))
         secure = Settings().get_bool("binjahub.secure")
         self.binjahub = Binjahub(host, port, secure=secure)
-        bndbs = self.binjahub.list_bndbs()
-        self.comments_model = BinjahubViewModel(bndbs)
+        self.context = context
+        self.bv = bv
 
-        self.match_view = QTreeView()
-        self.match_view.setModel(self.comments_model)
+        if bv:
+            doubleClicked = self.view_double_clicked_warp
+            files = self.binjahub.list_warps()
+        elif context:
+            doubleClicked = self.view_double_clicked_bndb
+            self.context = context
+            files = self.binjahub.list_bndbs()
+        else:
+            # we should never hit this condition
+            return
 
-        self.match_view.setSelectionMode(QTreeView.ExtendedSelection)
+        self.binjahub_viewer_model = BinjahubViewModel(files)
+        self.view = QTreeView()
+        self.view.setModel(self.binjahub_viewer_model)
+        self.view.setSelectionMode(QTreeView.ExtendedSelection)
+        self.view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.view.doubleClicked.connect(doubleClicked)
 
-        self.match_view.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.match_view.doubleClicked.connect(self.match_view_double_clicked)
+        self.view.setRootIsDecorated(False)
+        self.view.setFont(binaryninjaui.getMonospaceFont(self))
 
-        self.match_view.setRootIsDecorated(False)
-        self.match_view.setFont(binaryninjaui.getMonospaceFont(self))
+        for i in range(len(self.binjahub_viewer_model.files_info)):
+            self.view.resizeColumnToContents(i)
 
-        for i in range(len(self.comments_model.comments_info)):
-            self.match_view.resizeColumnToContents(i)
-
-        self.match_view.setSortingEnabled(True)
-        self.match_view.sortByColumn(0, Qt.AscendingOrder)
+        self.view.setSortingEnabled(True)
+        self.view.sortByColumn(0, Qt.AscendingOrder)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.match_view)
+        layout.addWidget(self.view)
 
         self.setLayout(layout)
-        self.setWindowTitle("Binjahub Viewer")
+        self.setWindowTitle("BinjaHub Viewer")
         self.resize(400, 350)
         flags = self.windowFlags()
         flags |= Qt.WindowMaximizeButtonHint
         flags &= ~Qt.WindowContextHelpButtonHint
         self.setWindowFlags(flags)
 
-    def match_view_double_clicked(self, index):
+    def view_double_clicked_bndb(self, index):
         if not index.isValid():
             assert False
             return
-        entry = self.comments_model.entries[index.row()]
-        filename = self.binjahub.get_bndb(entry["bndb"])
-        if not filename:
-            log.log_alert(f"{entry['bndb']} does not exist!")
-            return
+        entry = self.binjahub_viewer_model.entries[index.row()]
+        filename = self.binjahub.get_bndb(entry["file"])
         self.context.openFilename(filename)
+
+    def view_double_clicked_warp(self, index):
+        if not index.isValid():
+            assert False
+            return
+        containers = list(WarpContainer)
+        entry = self.binjahub_viewer_model.entries[index.row()]
+        filename = self.binjahub.get_warp(entry["file"])
+        print(filename)
+
+        containers[0].add_source(filename)
+        run_matcher(self.bv)
 
 
 class BinjahubViewModel(QAbstractItemModel):
@@ -128,8 +150,8 @@ class BinjahubViewModel(QAbstractItemModel):
             return lambda i: "{:x}".format(self.entries[i][key])
 
         # Column name, sort key, display function
-        self.comments_info = [
-            ("BNDB", "bndb", col_field("bndb")),
+        self.files_info = [
+            ("File", "file", col_field("file")),
             ("Size", "size", col_field("size")),
         ]
 
@@ -138,7 +160,7 @@ class BinjahubViewModel(QAbstractItemModel):
 
         for bndb in bndbs:
             entry = {}
-            entry["bndb"] = bndb
+            entry["file"] = bndb
             entry["size"] = bndbs[bndb]
             self.entries.append(entry)
 
@@ -149,7 +171,7 @@ class BinjahubViewModel(QAbstractItemModel):
 
         if row >= len(self.entries):
             return QModelIndex()
-        if col >= len(self.comments_info):
+        if col >= len(self.files_info):
             return QModelIndex()
 
         return self.createIndex(row, col)
@@ -165,13 +187,13 @@ class BinjahubViewModel(QAbstractItemModel):
         return len(self.entries)
 
     def columnCount(self, parent):
-        return len(self.comments_info)
+        return len(self.files_info)
 
     def data(self, index, role):
         if index.row() >= len(self.entries):
             return None
 
-        name, key, display = self.comments_info[index.column()]
+        name, key, display = self.files_info[index.column()]
         if role == Qt.DisplayRole:
             return display(index.row())
         return None
@@ -182,13 +204,13 @@ class BinjahubViewModel(QAbstractItemModel):
         if orientation != Qt.Horizontal:
             return None
 
-        name, key, display = self.comments_info[section]
+        name, key, display = self.files_info[section]
         return name
 
     def sort(self, col, order):
         self.beginResetModel()
 
-        name, key, display = self.comments_info[col]
+        name, key, display = self.files_info[col]
         self.entries.sort(key=lambda k: k[key], reverse=(order != Qt.AscendingOrder))
 
         self.endResetModel()
@@ -278,6 +300,29 @@ class Binjahub:
             return
         log.log_info(f"Saved database to {self.host}")
 
+    def list_warps(self) -> dict:
+        if dbs := self.get("warp"):
+            return dbs
+        return {}
+
+    def get_warp(self, warp) -> Optional[str]:
+        data = self.get(f"warp/{warp}")
+        if not data:
+            return None
+        file = Path(binaryninja.user_directory()) / "binjahub" / "WARP" / warp
+        file.parent.mkdir(parents=True, exist_ok=True)
+        open(file, "wb").write(data)
+        return str(file)
+
+    def upload_warp(self, warp):
+        log.log_info(f"Uploading {warp}")
+        file = {"file": open(warp, "rb")}
+        response = self.post("warp", files=file)
+        if not response:
+            log.log_alert(f"Unable to upload {warp}!")
+            return
+        log.log_info(f"Saved warp signature to {self.host}")
+
     def __resolve_req(self, r: requests.Response):
         if r.status_code != 200:
             return None
@@ -298,7 +343,7 @@ class BackgroundTask(BackgroundTaskThread):
         self.func(self.args[0])
 
 
-def open_for_binjahub(ctx: UIActionContext):
+def open_from_binjahub(ctx: UIActionContext):
     context: UIContext = ctx.context
     if context is None:
         return
@@ -331,11 +376,79 @@ def push_to_binjahub(bv):
     background_task.start()
 
 
+def list_warp_signatures(bv):
+    global dialog
+    dialog = BinjahubViewerDialog(context=None, bv=bv)
+    dialog.show()
+    dialog.raise_()
+    dialog.activateWindow()
+
+
+def push_warp(bv):
+    # create WARP
+    warp = Path(bv.file.filename).name.replace(" ", "_")
+    file = Path(binaryninja.user_directory()) / "binjahub" / "WARP" / f"{warp}.warp"
+    file.parent.mkdir(parents=True, exist_ok=True)
+
+    # may remove later
+    try:
+        os.remove(str(file))
+    except FileNotFoundError:
+        pass
+
+    container = WarpContainer.all()[0]
+    source = container.add_source(str(file))
+    target = WarpTarget(bv.platform)
+
+    target_functions = [
+        WarpFunction(function)
+        for function in bv.functions
+        if "sub_" not in function.name
+    ]
+
+    container.add_functions(target, source, target_functions)
+    container.commit_source(source)
+
+    host = Settings().get_string("binjahub.host")
+    port = int(Settings().get_string("binjahub.port"))
+    secure = Settings().get_bool("binjahub.secure")
+
+    binjahub = Binjahub(host, port, secure)
+    background_task = BackgroundTask("Binjahub upload...", binjahub.upload_warp, file)
+    background_task.start()
+
+
+def pull_warps(bv):
+    host = Settings().get_string("binjahub.host")
+    port = int(Settings().get_string("binjahub.port"))
+    secure = Settings().get_bool("binjahub.secure")
+
+    binjahub = Binjahub(host, port, secure)
+
+    warps = binjahub.list_warps()
+    containers = list(WarpContainer)
+
+    for warp in warps:
+        print(f"downloading {warp}")
+        file = binjahub.get_warp(warp)
+        containers[0].add_source(file)
+
+    run_matcher(bv)
+
+
 UIAction.registerAction("Open from binjahub")
 UIActionHandler.globalActions().bindAction(
-    "Open from binjahub", UIAction(open_for_binjahub)
+    "Open from binjahub", UIAction(open_from_binjahub)
 )
 Menu.mainMenu("File").addAction("Open from binjahub", "Open")
 UIContext.registerFileOpenMode("Binjahub", "Open from Binjahub", "Open from binjahub")
 
 PluginCommand.register("Push to Binjahub", "Push to Binjahub", push_to_binjahub)
+
+PluginCommand.register(
+    "List WARP signatures on BinjaHub",
+    "List WARP signatures on BinjaHub",
+    list_warp_signatures,
+)
+PluginCommand.register("Push WARP to BinjaHub", "Push WARP to BinjaHub", push_warp)
+PluginCommand.register("Apply all BinjaHub WARPs", "Apply BinjaHub WARPs", pull_warps)

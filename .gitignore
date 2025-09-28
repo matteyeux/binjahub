@@ -1,6 +1,7 @@
 binjahub/__pycache__/
 binjahub/routers/__pycache__/
 BNDB
+WARP
 dist
 *.bndb
 .env
