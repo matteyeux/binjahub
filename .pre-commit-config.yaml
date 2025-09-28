@@ -12,3 +12,9 @@ repos:
         entry: uv run mypy
         language: system
         types: [python]
+
+      - id: isort
+        name: isort
+        entry: uv run isort
+        language: system
+        types: [python]
