@@ -12,7 +12,7 @@ router = APIRouter()
 def list_warps():
     """Route to list WARPs."""
     files = {}
-    for file in glob.glob('WARP/*'):
+    for file in glob.glob("WARP/*"):
         f = Path(file)
         filesize = (f.stat().st_size) / (1024 * 1024)
         files[os.path.basename(file)] = f"{filesize:.2f} MB"
@@ -21,8 +21,9 @@ def list_warps():
 
 @router.post("/warp", tags=["warp"])
 async def upload_warp(file: UploadFile = File(...)):
-    with open(f"WARP/{file.filename}", "wb") as buffer:
-        buffer.write(await file.read())
+    warp_file = Path(f"WARP/{file.filename}")
+    warp_file.parent.mkdir(parents=True, exist_ok=True)
+    warp_file.write_bytes(await file.read())
     return {"filename": file.filename}
 
 
