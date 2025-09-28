@@ -1,60 +1,15 @@
 import glob
 import os
 from pathlib import Path
-import time
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi import UploadFile, File
 from fastapi.responses import FileResponse
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+
+from binjahub.common import authenticated
+
 from typing import Annotated
 
-import jwt
-from pydantic import BaseModel
-
-from binjahub.auth import jwt_secret, ldap_connect, uses_auth
-
 router = APIRouter()
-
-
-class Token(BaseModel):
-    access_token: str
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
-
-def authenticated():
-    if not uses_auth():
-        return lambda: None
-
-    async def _authenticated(token: Annotated[str, Depends(oauth2_scheme)]):
-        try:
-            payload = jwt.decode(token, jwt_secret(), algorithms=["HS256"])
-            return payload["sub"]
-        except (jwt.exceptions.ExpiredSignatureError, jwt.exceptions.DecodeError):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    return _authenticated
-
-
-@router.post("/login", tags=["auth"], response_model=Token)
-def login(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    if not uses_auth():
-        raise HTTPException(status_code=404, detail="page not found")
-    conn = ldap_connect(data.username, data.password)
-    if not conn:
-        raise HTTPException(status_code=401, detail="invalid credentials")
-    # 10 minute token, may be increased if databases get very large when uploading/downloading
-    payload = {"sub": data.username, "exp": int(time.time()) + 60 * 10}
-    token = jwt.encode(payload=payload, key=jwt_secret())
-    return {"access_token": token}
-
-
-@router.get("/auth-required", tags=["auth"])
-def auth_required():
-    if uses_auth():
-        return {"auth_required": True}
-    return {"auth_required": False}
 
 
 @router.get("/bndb", tags=["bndb"])
